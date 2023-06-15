@@ -1,5 +1,5 @@
 use crate::structs::CommentView;
-use diesel::{
+use dieseldiesel::{
   result::Error,
   BoolExpressionMethods,
   ExpressionMethods,

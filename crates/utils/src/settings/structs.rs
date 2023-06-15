@@ -9,6 +9,11 @@ pub struct Settings {
   /// settings related to the postgresql database
   #[default(Default::default())]
   pub database: DatabaseConfig,
+
+  /// settings related to the postgresql replica database
+  #[default(Default::default())]
+  pub databaseReplica: DatabaseConfig,
+
   /// Settings related to activitypub federation
   /// Pictrs image server configuration.
   #[default(Some(Default::default()))]

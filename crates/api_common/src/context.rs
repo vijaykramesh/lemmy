@@ -9,6 +9,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct LemmyContext {
   pool: DbPool,
+  replica_pool: DbPool,
   client: Arc<ClientWithMiddleware>,
   secret: Arc<Secret>,
   rate_limit_cell: RateLimitCell,
@@ -17,12 +18,14 @@ pub struct LemmyContext {
 impl LemmyContext {
   pub fn create(
     pool: DbPool,
+    replica_pool: DbPool,
     client: ClientWithMiddleware,
     secret: Secret,
     rate_limit_cell: RateLimitCell,
   ) -> LemmyContext {
     LemmyContext {
       pool,
+      replica_pool,
       client: Arc::new(client),
       secret: Arc::new(secret),
       rate_limit_cell,
@@ -30,6 +33,9 @@ impl LemmyContext {
   }
   pub fn pool(&self) -> &DbPool {
     &self.pool
+  }
+  pub fn replica_pool(&self) -> &DbPool {
+    &self.replica_pool
   }
   pub fn client(&self) -> &ClientWithMiddleware {
     &self.client

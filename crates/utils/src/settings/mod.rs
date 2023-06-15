@@ -60,6 +60,24 @@ impl Settings {
     }
   }
 
+  // get_database_replica_url
+  pub fn get_database_replica_url(&self) -> Option<String> {
+    match &self.databaseReplica.connection {
+      Some(DatabaseConnection::Uri { uri }) => Some(uri.clone()),
+      Some(DatabaseConnection::Parts(parts)) => {
+        Some(format!(
+          "postgres://{}:{}@{}:{}/{}",
+          utf8_percent_encode(&parts.user, NON_ALPHANUMERIC),
+          utf8_percent_encode(&parts.password, NON_ALPHANUMERIC),
+          parts.host,
+          parts.port,
+          utf8_percent_encode(&parts.database, NON_ALPHANUMERIC),
+        ))
+      }
+      None => None,
+    }
+  }
+
   fn get_config_location() -> String {
     env::var("LEMMY_CONFIG_LOCATION").unwrap_or_else(|_| DEFAULT_CONFIG_FILE.to_string())
   }

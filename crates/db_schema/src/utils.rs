@@ -45,6 +45,10 @@ pub async fn get_conn(pool: &DbPool) -> Result<PooledConnection<AsyncPgConnectio
 pub fn get_database_url_from_env() -> Result<String, VarError> {
   env::var("LEMMY_DATABASE_URL")
 }
+pub fn get_database_replica_url_from_env() -> Result<String, VarError> {
+  env::var("LEMMY_DATABASE_REPLICA_URL")
+    .or_else(|_| get_database_url_from_env())
+}
 
 pub fn fuzzy_search(q: &str) -> String {
   let replaced = q.replace('%', "\\%").replace('_', "\\_").replace(' ', "%");
@@ -153,6 +157,21 @@ async fn build_db_pool_settings_opt(settings: Option<&Settings>) -> Result<DbPoo
   Ok(pool)
 }
 
+async fn build_db_replica_pool_settings_opt(settings: Option<&Settings>) -> Result<DbPool, LemmyError> {
+  let db_url = get_database_replica_url(settings);
+  let pool_size = settings.map(|s| s.database.pool_size).unwrap_or(5);
+  let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(&db_url);
+  let pool = Pool::builder(manager)
+    .max_size(pool_size)
+    .wait_timeout(POOL_TIMEOUT)
+    .create_timeout(POOL_TIMEOUT)
+    .recycle_timeout(POOL_TIMEOUT)
+    .runtime(Runtime::Tokio1)
+    .build()?;
+
+  Ok(pool)
+}
+
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 pub fn run_migrations(db_url: &str) {
@@ -168,6 +187,10 @@ pub fn run_migrations(db_url: &str) {
 
 pub async fn build_db_pool(settings: &Settings) -> Result<DbPool, LemmyError> {
   build_db_pool_settings_opt(Some(settings)).await
+}
+
+pub async fn build_db_replica_pool(settings: &Settings) -> Result<DbPool, LemmyError> {
+  build_db_replica_pool_settings_opt(Some(settings)).await
 }
 
 pub async fn build_db_pool_for_tests() -> DbPool {
@@ -187,6 +210,16 @@ pub fn get_database_url(settings: Option<&Settings>) -> String {
   }
 }
 
+pub fn get_database_replica_url(settings: Option<&Settings>) -> String {
+  // The env var should override anything in the settings config
+  match get_database_replica_url_from_env() {
+    Ok(url) => url,
+    Err(e) => match settings {
+      Some(settings) => settings.get_database_replica_url(),
+      None => panic!("Failed to read database URL from env var LEMMY_DATABASE_URL: {e}"),
+    },
+  }
+}
 pub fn naive_now() -> NaiveDateTime {
   chrono::prelude::Utc::now().naive_utc()
 }

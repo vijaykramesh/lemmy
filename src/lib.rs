@@ -40,6 +40,7 @@ use tracing_error::ErrorLayer;
 use tracing_log::LogTracer;
 use tracing_subscriber::{filter::Targets, layer::SubscriberExt, Layer, Registry};
 use url::Url;
+use lemmy_db_schema::utils::build_db_replica_pool;
 
 /// Max timeout for http requests
 pub(crate) const REQWEST_TIMEOUT: Duration = Duration::from_secs(10);
@@ -71,7 +72,7 @@ pub async fn start_lemmy_server() -> Result<(), LemmyError> {
 
   // Set up the connection pool
   let pool = build_db_pool(&settings).await?;
-
+  let replica_pool = build_db_replica_pool(&settings).await?;
   // Run the Code-required migrations
   run_advanced_migrations(&pool, &settings).await?;
 
@@ -81,7 +82,7 @@ pub async fn start_lemmy_server() -> Result<(), LemmyError> {
     .expect("Couldn't initialize secrets.");
 
   // Make sure the local site is set up.
-  let site_view = SiteView::read_local(&pool)
+  let site_view = SiteView::read_local(&pool, &replica_pool
     .await
     .expect("local site not set up");
   let local_site = site_view.local_site;
@@ -129,6 +130,7 @@ pub async fn start_lemmy_server() -> Result<(), LemmyError> {
   HttpServer::new(move || {
     let context = LemmyContext::create(
       pool.clone(),
+      replica_pool.clone(),
       client.clone(),
       secret.clone(),
       rate_limit_cell.clone(),

@@ -85,7 +85,7 @@ pub(crate) mod tests {
   pub(crate) async fn init_context() -> Data<LemmyContext> {
     // call this to run migrations
     let pool = build_db_pool_for_tests().await;
-
+    let replica_pool = build_db_pool_for_tests().await;
     let settings = SETTINGS.clone();
     let client = Client::builder()
       .user_agent(build_user_agent(&settings))
@@ -101,7 +101,7 @@ pub(crate) mod tests {
     let rate_limit_config = RateLimitConfig::builder().build();
     let rate_limit_cell = RateLimitCell::new(rate_limit_config).await;
 
-    let context = LemmyContext::create(pool, client, secret, rate_limit_cell.clone());
+    let context = LemmyContext::create(pool, replica_pool, client, secret, rate_limit_cell.clone());
     let config = FederationConfig::builder()
       .domain("example.com")
       .app_data(context)
